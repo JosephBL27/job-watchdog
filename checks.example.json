@@ -1,0 +1,154 @@
+{
+ "_doc": "Example artifact contracts for job-watchdog, a subset of the checks I run. Each check asserts an ARTIFACT (fresh file, log line, note field, state field), never an exit code. Copy to ~/.config/job-watchdog/checks.json and edit. Paths expand ~ and ${VAR} from 'vars'.",
+ "version": 1,
+ "vars": {
+  "VAULT": "~/vault",
+  "PUSHUP": "~/Projects/pushup-alarm",
+  "CODEX": "~/.codex/automations"
+ },
+ "checks": [
+  {
+   "id": "brain-steward",
+   "name": "Brain steward weekly repair pass",
+   "schedule": "Sun 09:00 (launchd)",
+   "launchd_label": "com.joseph.brain-steward",
+   "severity": "high",
+   "max_age_hours": 192,
+   "type": "any_of",
+   "checks": [
+    {
+     "type": "mtime",
+     "path": "${VAULT}/20 Areas/Brain-Audits/* Steward Pass.md",
+     "time_from": "filename"
+    },
+    {
+     "type": "log_marker",
+     "path": "~/.config/brain-steward/launchd.out.log",
+     "pattern": "pass finished \\(exit 0\\)"
+    }
+   ],
+   "fix": "Read ~/.config/brain-steward/launchd.out.log; auth failures need a fresh `claude setup-token` in ~/.config/brain-steward/token."
+  },
+  {
+   "id": "brain-health",
+   "name": "Brain Health dashboard",
+   "schedule": "daily 05:00 + RunAtLoad (launchd)",
+   "launchd_label": "com.joseph.brain-health",
+   "severity": "warn",
+   "max_age_hours": 26,
+   "type": "frontmatter_time",
+   "path": "${VAULT}/90 Meta/Brain Health.md",
+   "key": "last_run",
+   "fix": "Read ~/.config/brain-health/launchd.err.log (EDEADLK = iCloud/File Provider not settled)."
+  },
+  {
+   "id": "vault-autocommit",
+   "name": "Vault autocommit safety net",
+   "schedule": "every 300 s (launchd)",
+   "launchd_label": "com.joseph.vault-autocommit",
+   "severity": "high",
+   "max_age_hours": 0.5,
+   "type": "git_clean_age",
+   "path": "${VAULT}",
+   "fix": "Tree has had uncommitted changes longer than 30 min. Read ~/.config/vault-autocommit/last-run.log for 'skipped' lines."
+  },
+  {
+   "id": "carta-redraw",
+   "name": "Carta portolan chart redraw",
+   "schedule": "Sun 08:45 (launchd)",
+   "launchd_label": "com.joseph.carta-redraw",
+   "severity": "warn",
+   "max_age_hours": 192,
+   "type": "mtime",
+   "path": "${VAULT}/90 Meta/Charts/carta-del-cervello.html",
+   "fix": "Read ~/Library/Logs/carta-redraw.log."
+  },
+  {
+   "id": "finder-organizer",
+   "name": "Finder organizer weekly cycle",
+   "schedule": "Sun 11:00 (launchd)",
+   "launchd_label": "com.joseph.finder-organizer",
+   "severity": "warn",
+   "max_age_hours": 192,
+   "type": "mtime",
+   "path": "~/.config/finder-organizer/state/apply_report_????-??-??.json",
+   "time_from": "filename",
+   "fix": "A cycle that reaches 'apply' writes apply_report_<date>.json. Read ~/.config/finder-organizer/state/launchd.out.log ('codex classify FAILED')."
+  },
+  {
+   "id": "selforge-delivery-alarm",
+   "name": "SELFORGE code committed but not on the phone",
+   "schedule": "raised hourly by backup-user-data.sh",
+   "severity": "warn",
+   "max_age_hours": 2,
+   "type": "log_marker",
+   "invert": true,
+   "path": "~/Library/Logs/selforge-userdata-backup.log",
+   "pattern": "DELIVERY ALARM",
+   "fix": "Committed app code postdates the last successful QA install. Deploy to the phone.",
+   "launchd_label": "com.josephblumberg.selforge.userdata-backup",
+   "log_max_age_hours": 3,
+   "_why": "Repair 2026-09-23: backup-user-data.sh writes this log every hour, so a log older than 3h (or missing) means the alarm source stopped and 'no alarm line' proves nothing.",
+   "heartbeat_pattern": "DELIVERY (ALARM |all checks passed|ok: |ok by timestamp)",
+   "heartbeat_max_age_hours": 3,
+   "not_checked_pattern": "DELIVERY no alarm raised, but .* could NOT be verified",
+   "_why_heartbeat": "Repair 2026-09-23 r2: a fresh log proves backup-user-data.sh runs, not that check_delivery ran. A real verdict must appear within 3h: an ALARM line, \"all checks passed\", or a positive per-check line (\"DELIVERY ok: the phone took <sha>\" / \"ok by timestamp\" = the durable OFFLINE check 1 ran and passed; \"ok: phone runs QA build\" = check 3). r2 repair: the phone is offline most hours, and in that state check 1 still runs, so counting only \"all checks passed\" made every offline stretch read as NOT CHECKED. The summary line \"could NOT be verified ... not a pass\" is NOT a verdict by itself."
+  },
+  {
+   "id": "obsidian-mcp-keeper",
+   "name": "Obsidian REST/MCP endpoint (keeper)",
+   "schedule": "every 60 s (launchd)",
+   "launchd_label": "com.joseph.obsidian-mcp-keeper",
+   "paused_if_exists": "~/.config/obsidian-mcp/keeper-paused",
+   "severity": "warn",
+   "type": "http_local",
+   "url": "http://127.0.0.1:27123/",
+   "expect_status": 200,
+   "context_log": "~/.config/obsidian-mcp/keeper.log",
+   "fix": "Port 27123 not answering. If Obsidian is running, the Local REST API plugin is wedged; toggle it. The keeper cannot heal that case."
+  },
+  {
+   "id": "secretary-intake",
+   "name": "Secretary: intake (Gmail + Outlook + Messages + WhatsApp)",
+   "schedule": "07/12/15/20 PT daily (Codex); longest gap 11 h",
+   "codex_automation": "secretary-maybe-schedule-intake",
+   "severity": "warn",
+   "max_age_hours": 14,
+   "type": "mtime",
+   "path": "${CODEX}/secretary-maybe-schedule-intake/memory.md",
+   "fix": "Codex writes memory.md every run, including skips. Check the Codex app is running."
+  },
+  {
+   "id": "canvas-intake",
+   "name": "Canvas course intake (state committed)",
+   "schedule": "daily 16:00 (Codex)",
+   "codex_automation": "canvas-course-intelligence-intake",
+   "severity": "high",
+   "max_age_hours": 96,
+   "type": "json_time",
+   "path": "~/Documents/SECRETARY/.secretary/canvas_intake_state.json",
+   "key": "updated_at",
+   "fix": "State is committed only after brain + Calendar work succeeds. The run is starting but stopping on a blocker; read the newest section of ${CODEX}/canvas-course-intelligence-intake/memory.md."
+  },
+  {
+   "id": "brain-steward-token",
+   "name": "Headless token: brain-steward",
+   "severity": "high",
+   "type": "token_expiry",
+   "path": "~/.config/brain-steward/token",
+   "lifetime_days": 365,
+   "warn_days": 30,
+   "fix": "Run `claude setup-token` in Terminal and save the value to this file (chmod 600). Documented lifetime: one year.",
+   "_why": "Repair 2026-09-24 r3b: the created date is the file's birth time (stat -f %B), not a literal; the best status is 'lifetime-ok (not validated)' because nothing tests the token."
+  }
+ ],
+ "discovery_not_covered": {
+  "_doc": "Scheduler surfaces that exist on this machine but that job-watchdog does NOT scan. An empty 'unwatched' list means 'nothing unwatched on the scanned surfaces', not full coverage.",
+  "claude-code-session-cron": "Claude Code CronCreate / /loop schedules live only inside a running session and die with it; nothing durable to read.",
+  "codex-app-internal": "Codex schedules are read from ~/.codex/automations/*/automation.toml only; anything the Codex app schedules elsewhere is not seen.",
+  "antigravity-other": "Only ~/.gemini/config/sidecars/*/sidecar.json with builtin 'schedule' is scanned; Antigravity agent-manager or workflow schedules stored elsewhere are not seen.",
+  "login-items": "Login Items / Background Items (SMAppService) are not scheduled jobs and are not scanned.",
+  "iphone": "iOS Shortcuts automations and on-phone schedules run on the device, not this Mac.",
+  "cloud": "Cloud-side schedules (claude.ai scheduled tasks in the cloud, GitHub Actions, Google Apps Script triggers) are not visible from local files."
+ }
+}
