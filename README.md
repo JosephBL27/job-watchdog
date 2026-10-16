@@ -1,5 +1,7 @@
 # job-watchdog
 
+**Case study:** [josephbl27.github.io/#watchdog](https://josephbl27.github.io/#watchdog), part of [my portfolio](https://josephbl27.github.io/).
+
 Every hour, a Ruby script checks each scheduled job on my Mac by looking for the
 thing that job was supposed to make: a dated note in my Obsidian vault, a
 commit, a log line, a fresh timestamp. Exit codes are never taken as proof,
